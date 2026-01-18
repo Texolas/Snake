@@ -2,7 +2,7 @@
   "name": "Snake Game",
   "short_name": "Snake",
   "description": "Jeu Snake classique avec contrôles tactiles",
-  "start_url": "/snake_game.html",
+  "start_url": "./snake_game.html",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",
