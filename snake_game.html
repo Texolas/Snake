@@ -628,20 +628,34 @@
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
         
         // Audio context pour les sons
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let currentOscillator = null;
+        let audioCtx = null;
+        let activeOscillators = [];
+        
+        // Initialiser l'audio context au premier clic
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Arrêter tous les sons en cours
+        function stopAllSounds() {
+            activeOscillators.forEach(osc => {
+                try {
+                    osc.stop();
+                    osc.disconnect();
+                } catch(e) {
+                    // Ignore les erreurs si déjà arrêté
+                }
+            });
+            activeOscillators = [];
+        }
         
         // Sons
         function playSound(type) {
             if (!soundEnabled) return;
             
-            // Arrêter le son précédent s'il existe
-            if (currentOscillator) {
-                try {
-                    currentOscillator.stop();
-                } catch(e) {}
-                currentOscillator = null;
-            }
+            initAudio();
             
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -649,34 +663,44 @@
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
-            currentOscillator = oscillator;
+            let duration = 0.1;
             
             switch(type) {
                 case 'eat':
                     oscillator.frequency.value = 400;
                     gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.1);
-                    setTimeout(() => { currentOscillator = null; }, 150);
+                    duration = 0.1;
                     break;
                 case 'gameOver':
                     oscillator.frequency.value = 200;
                     gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.3);
-                    setTimeout(() => { currentOscillator = null; }, 350);
+                    duration = 0.3;
                     break;
                 case 'levelUp':
                     oscillator.frequency.value = 600;
                     gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                    oscillator.start(audioCtx.currentTime);
-                    oscillator.stop(audioCtx.currentTime + 0.2);
-                    setTimeout(() => { currentOscillator = null; }, 250);
+                    duration = 0.2;
                     break;
             }
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + duration);
+            
+            activeOscillators.push(oscillator);
+            
+            // Nettoyer après la durée
+            setTimeout(() => {
+                const index = activeOscillators.indexOf(oscillator);
+                if (index > -1) {
+                    try {
+                        oscillator.disconnect();
+                    } catch(e) {}
+                    activeOscillators.splice(index, 1);
+                }
+            }, duration * 1000 + 100);
         }
         
         // Initialisation
@@ -744,6 +768,15 @@
         function startGame() {
             if (gameRunning) return;
             
+            // Arrêter tout son en cours
+            stopAllSounds();
+            
+            // S'assurer que l'ancien gameLoop est bien arrêté
+            if (gameLoop) {
+                clearInterval(gameLoop);
+                gameLoop = null;
+            }
+            
             // Réinitialiser le jeu
             snake = [{x: 10, y: 10}];
             dx = 1;
@@ -761,9 +794,14 @@
             
             document.getElementById('startButton').textContent = '🎮 En cours...';
             document.getElementById('startButton').disabled = true;
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
             document.getElementById('pauseButton').disabled = false;
             document.getElementById('gameOverlay').classList.remove('active');
             
+            // Redessiner immédiatement
+            draw();
+            
+            // Démarrer la boucle de jeu
             gameLoop = setInterval(update, currentSpeed);
         }
         
@@ -774,12 +812,18 @@
             const pauseBtn = document.getElementById('pauseButton');
             
             if (gamePaused) {
-                clearInterval(gameLoop);
+                if (gameLoop) {
+                    clearInterval(gameLoop);
+                    gameLoop = null;
+                }
                 pauseBtn.textContent = '▶️ Reprendre';
                 document.getElementById('overlayText').textContent = 'Pause';
                 document.getElementById('overlaySubtext').textContent = 'Appuyez sur Espace ou le bouton pour continuer';
                 document.getElementById('gameOverlay').classList.add('active');
             } else {
+                if (gameLoop) {
+                    clearInterval(gameLoop);
+                }
                 gameLoop = setInterval(update, currentSpeed);
                 pauseBtn.textContent = '⏸️ Pause';
                 document.getElementById('gameOverlay').classList.remove('active');
@@ -1133,10 +1177,19 @@
         }
         
         function gameOver() {
-            clearInterval(gameLoop);
+            // Arrêter la boucle de jeu
+            if (gameLoop) {
+                clearInterval(gameLoop);
+                gameLoop = null;
+            }
+            
             gameRunning = false;
             gamePaused = false;
             
+            // Arrêter tous les sons en cours
+            stopAllSounds();
+            
+            // Jouer le son de game over
             playSound('gameOver');
             
             // Sauvegarder le score
@@ -1154,6 +1207,7 @@
             
             document.getElementById('startButton').textContent = '🔄 Rejouer';
             document.getElementById('startButton').disabled = false;
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
             document.getElementById('pauseButton').disabled = true;
             
             displayHighScores();
