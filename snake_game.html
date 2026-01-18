@@ -747,42 +747,39 @@
             // Arrêter absolument tout
             stopGame();
             
-            // Attendre un peu que tout soit bien arrêté
-            setTimeout(() => {
-                // Réinitialiser le jeu
-                snake = [{x: 10, y: 10}];
-                dx = 1;
-                dy = 0;
-                nextDx = 1;
-                nextDy = 0;
-                score = 0;
-                level = 1;
-                gamePaused = false;
-                
-                updateDifficulty();
-                placeFood();
-                updateScore();
-                
-                document.getElementById('startButton').textContent = '🎮 En cours...';
-                document.getElementById('startButton').disabled = true;
-                document.getElementById('pauseButton').textContent = '⏸️ Pause';
-                document.getElementById('pauseButton').disabled = false;
-                document.getElementById('gameOverlay').classList.remove('active');
-                
-                // Redessiner immédiatement
-                draw();
-                
-                // MAINTENANT on active le jeu
-                gameRunning = true;
-                
-                // Démarrer la boucle de jeu
-                gameLoopId = setInterval(update, currentSpeed);
-                gameLoop = gameLoopId;
-                
-                console.log('✅ Jeu démarré');
-                console.log('gameRunning après:', gameRunning);
-                console.log('gameLoopId après:', gameLoopId);
-            }, 50);
+            // Réinitialiser le jeu IMMÉDIATEMENT (pas de setTimeout)
+            snake = [{x: 10, y: 10}];
+            dx = 1;
+            dy = 0;
+            nextDx = 1;
+            nextDy = 0;
+            score = 0;
+            level = 1;
+            gamePaused = false;
+            
+            updateDifficulty();
+            placeFood();
+            updateScore();
+            
+            document.getElementById('startButton').textContent = '🎮 En cours...';
+            document.getElementById('startButton').disabled = true;
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
+            document.getElementById('pauseButton').disabled = false;
+            document.getElementById('gameOverlay').classList.remove('active');
+            
+            // Redessiner immédiatement
+            draw();
+            
+            // MAINTENANT on active le jeu
+            gameRunning = true;
+            
+            // Démarrer la boucle de jeu
+            gameLoopId = setInterval(update, currentSpeed);
+            gameLoop = gameLoopId;
+            
+            console.log('✅ Jeu démarré');
+            console.log('gameRunning après:', gameRunning);
+            console.log('gameLoopId après:', gameLoopId);
         }
         
         function stopGame() {
@@ -1205,33 +1202,30 @@
             // Arrêter le jeu immédiatement
             stopGame();
             
-            // Attendre que tout soit bien arrêté
+            // Traiter le game over IMMÉDIATEMENT (pas de setTimeout)
+            playSound('gameOver');
+            
+            // Sauvegarder le score
+            saveHighScore(score, difficulty);
+            
+            // Afficher le game over
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('overlayText').textContent = 'Game Over!';
+            document.getElementById('overlaySubtext').innerHTML = `Score: ${score}<br>Niveau: ${level}`;
+            document.getElementById('gameOverlay').classList.add('active');
+            document.getElementById('canvasContainer').classList.add('shake');
             setTimeout(() => {
-                // Jouer le son de game over
-                playSound('gameOver');
-                
-                // Sauvegarder le score
-                saveHighScore(score, difficulty);
-                
-                // Afficher le game over
-                document.getElementById('finalScore').textContent = score;
-                document.getElementById('overlayText').textContent = 'Game Over!';
-                document.getElementById('overlaySubtext').innerHTML = `Score: ${score}<br>Niveau: ${level}`;
-                document.getElementById('gameOverlay').classList.add('active');
-                document.getElementById('canvasContainer').classList.add('shake');
-                setTimeout(() => {
-                    document.getElementById('canvasContainer').classList.remove('shake');
-                }, 300);
-                
-                document.getElementById('startButton').textContent = '🔄 Rejouer';
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('pauseButton').textContent = '⏸️ Pause';
-                document.getElementById('pauseButton').disabled = true;
-                
-                displayHighScores();
-                
-                console.log('✅ Game Over traité');
-            }, 10);
+                document.getElementById('canvasContainer').classList.remove('shake');
+            }, 300);
+            
+            document.getElementById('startButton').textContent = '🔄 Rejouer';
+            document.getElementById('startButton').disabled = false;
+            document.getElementById('pauseButton').textContent = '⏸️ Pause';
+            document.getElementById('pauseButton').disabled = true;
+            
+            displayHighScores();
+            
+            console.log('✅ Game Over traité');
         }
         
         function saveHighScore(score, difficulty) {
