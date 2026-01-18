@@ -477,6 +477,7 @@
                 <div id="gameOverlay">
                     <div id="overlayText">Game Over!</div>
                     <div id="overlaySubtext">Score: <span id="finalScore">0</span></div>
+                    <div id="levelInfo" style="font-size: 16px; margin-top: 5px;">Niveau: 1</div>
                 </div>
             </div>
         </div>
@@ -624,6 +625,7 @@
         let gameLoop = null;
         let gameLoopId = null; // Nouveau: pour tracker l'ID exact
         let soundEnabled = true;
+        let gameOverCalled = false; // Protection contre double appel
         
         // High scores
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
@@ -743,6 +745,9 @@
                 console.log('⚠️ Jeu déjà en cours, on ignore');
                 return;
             }
+            
+            // Réinitialiser la protection gameOver
+            gameOverCalled = false;
             
             // Arrêter absolument tout
             stopGame();
@@ -1195,6 +1200,13 @@
         }
         
         function gameOver() {
+            // Protection contre double appel
+            if (gameOverCalled) {
+                console.log('⚠️ gameOver déjà appelé, on ignore');
+                return;
+            }
+            gameOverCalled = true;
+            
             console.log('=== GAME OVER ===');
             console.log('gameRunning avant:', gameRunning);
             console.log('gameLoopId avant:', gameLoopId);
@@ -1208,20 +1220,47 @@
             // Sauvegarder le score
             saveHighScore(score, difficulty);
             
-            // Afficher le game over
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('overlayText').textContent = 'Game Over!';
-            document.getElementById('overlaySubtext').innerHTML = `Score: ${score}<br>Niveau: ${level}`;
-            document.getElementById('gameOverlay').classList.add('active');
-            document.getElementById('canvasContainer').classList.add('shake');
-            setTimeout(() => {
-                document.getElementById('canvasContainer').classList.remove('shake');
-            }, 300);
+            // Vérifier que les éléments existent avant de les utiliser
+            const finalScoreEl = document.getElementById('finalScore');
+            const overlayTextEl = document.getElementById('overlayText');
+            const overlaySubtextEl = document.getElementById('overlaySubtext');
+            const gameOverlayEl = document.getElementById('gameOverlay');
+            const startButtonEl = document.getElementById('startButton');
+            const pauseButtonEl = document.getElementById('pauseButton');
             
-            document.getElementById('startButton').textContent = '🔄 Rejouer';
-            document.getElementById('startButton').disabled = false;
-            document.getElementById('pauseButton').textContent = '⏸️ Pause';
-            document.getElementById('pauseButton').disabled = true;
+            if (!finalScoreEl || !overlayTextEl || !overlaySubtextEl || !gameOverlayEl || !startButtonEl || !pauseButtonEl) {
+                console.error('❌ Éléments DOM manquants!');
+                console.log('finalScore:', finalScoreEl);
+                console.log('overlayText:', overlayTextEl);
+                console.log('overlaySubtext:', overlaySubtextEl);
+                console.log('gameOverlay:', gameOverlayEl);
+                console.log('startButton:', startButtonEl);
+                console.log('pauseButton:', pauseButtonEl);
+                return;
+            }
+            
+            // Afficher le game over
+            finalScoreEl.textContent = score;
+            overlayTextEl.textContent = 'Game Over!';
+            // NE PAS écraser overlaySubtext car ça contient le span finalScore
+            // overlaySubtextEl.innerHTML = `Score: ${score}<br>Niveau: ${level}`;
+            document.getElementById('levelInfo').textContent = `Niveau: ${level}`;
+            gameOverlayEl.classList.add('active');
+            
+            const canvasContainer = document.getElementById('canvasContainer');
+            if (canvasContainer) {
+                canvasContainer.classList.add('shake');
+                setTimeout(() => {
+                    if (canvasContainer) {
+                        canvasContainer.classList.remove('shake');
+                    }
+                }, 300);
+            }
+            
+            startButtonEl.textContent = '🔄 Rejouer';
+            startButtonEl.disabled = false;
+            pauseButtonEl.textContent = '⏸️ Pause';
+            pauseButtonEl.disabled = true;
             
             displayHighScores();
             
