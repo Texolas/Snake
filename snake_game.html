@@ -629,16 +629,27 @@
         
         // Audio context pour les sons
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let currentOscillator = null;
         
         // Sons
         function playSound(type) {
             if (!soundEnabled) return;
+            
+            // Arrêter le son précédent s'il existe
+            if (currentOscillator) {
+                try {
+                    currentOscillator.stop();
+                } catch(e) {}
+                currentOscillator = null;
+            }
             
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
+            
+            currentOscillator = oscillator;
             
             switch(type) {
                 case 'eat':
@@ -647,6 +658,7 @@
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                     oscillator.start(audioCtx.currentTime);
                     oscillator.stop(audioCtx.currentTime + 0.1);
+                    setTimeout(() => { currentOscillator = null; }, 150);
                     break;
                 case 'gameOver':
                     oscillator.frequency.value = 200;
@@ -654,6 +666,7 @@
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                     oscillator.start(audioCtx.currentTime);
                     oscillator.stop(audioCtx.currentTime + 0.3);
+                    setTimeout(() => { currentOscillator = null; }, 350);
                     break;
                 case 'levelUp':
                     oscillator.frequency.value = 600;
@@ -661,6 +674,7 @@
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                     oscillator.start(audioCtx.currentTime);
                     oscillator.stop(audioCtx.currentTime + 0.2);
+                    setTimeout(() => { currentOscillator = null; }, 250);
                     break;
             }
         }
