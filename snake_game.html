@@ -534,6 +534,25 @@
                 </div>
                 
                 <div class="setting-group" style="margin-top: 25px;">
+                    <label>🍎 Valeurs des Nourritures:</label>
+                    <div id="foodInfo" style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; font-size: 14px;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                            <div>🍎 Pomme: 10 pts</div>
+                            <div>🍇 Raisin: 12 pts</div>
+                            <div>🍊 Orange: 13 pts</div>
+                            <div>🍌 Banane: 15 pts</div>
+                            <div>🥝 Kiwi: 16 pts</div>
+                            <div>🍒 Cerise: 18 pts</div>
+                            <div>🍓 Fraise: 20 pts</div>
+                            <div>🍉 Pastèque: 25 pts</div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 12px; opacity: 0.8; text-align: center;">
+                            💡 Points × Niveau actuel
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-group" style="margin-top: 25px;">
                     <label>🏆 Meilleurs Scores:</label>
                     <div id="highScoresList"></div>
                 </div>
@@ -583,6 +602,19 @@
         // Variables de la nourriture
         let foodX = 15;
         let foodY = 15;
+        let currentFood = null;
+        
+        // Types de nourriture avec leurs icônes et points
+        const foodTypes = [
+            { emoji: '🍎', points: 10, name: 'Pomme' },
+            { emoji: '🍌', points: 15, name: 'Banane' },
+            { emoji: '🍇', points: 12, name: 'Raisin' },
+            { emoji: '🍓', points: 20, name: 'Fraise' },
+            { emoji: '🍊', points: 13, name: 'Orange' },
+            { emoji: '🍉', points: 25, name: 'Pastèque' },
+            { emoji: '🍒', points: 18, name: 'Cerise' },
+            { emoji: '🥝', points: 16, name: 'Kiwi' }
+        ];
         
         // Variables du jeu
         let score = 0;
@@ -764,9 +796,14 @@
             
             // Vérifier si le serpent mange la nourriture
             if (head.x === foodX && head.y === foodY) {
-                score += 10 * level;
+                const points = currentFood ? currentFood.points : 10;
+                score += points * level;
                 playSound('eat');
                 updateScore();
+                
+                // Animation de points gagnés
+                showPointsAnimation(foodX, foodY, points * level);
+                
                 placeFood();
                 
                 // Augmenter le niveau tous les 50 points
@@ -813,67 +850,232 @@
                 ctx.stroke();
             }
             
-            // Dessiner le serpent
+            // Dessiner le serpent avec un style réaliste
             snake.forEach((segment, index) => {
-                if (index === 0) {
-                    ctx.fillStyle = snakeColor;
-                } else {
-                    ctx.fillStyle = adjustBrightness(snakeColor, -10);
-                }
+                const x = segment.x * gridSize;
+                const y = segment.y * gridSize;
                 
-                ctx.fillRect(
-                    segment.x * gridSize + 1,
-                    segment.y * gridSize + 1,
-                    gridSize - 2,
-                    gridSize - 2
-                );
-                
-                // Yeux sur la tête
                 if (index === 0) {
-                    ctx.fillStyle = 'white';
-                    const eyeSize = Math.max(2, gridSize / 6);
-                    const offset = gridSize / 4;
+                    // TÊTE DU SERPENT - Style détaillé
+                    ctx.save();
                     
-                    if (dx === 1) {
-                        ctx.fillRect(segment.x * gridSize + gridSize - offset - eyeSize, segment.y * gridSize + offset, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * gridSize + gridSize - offset - eyeSize, segment.y * gridSize + gridSize - offset - eyeSize, eyeSize, eyeSize);
-                    } else if (dx === -1) {
-                        ctx.fillRect(segment.x * gridSize + offset, segment.y * gridSize + offset, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * gridSize + offset, segment.y * gridSize + gridSize - offset - eyeSize, eyeSize, eyeSize);
-                    } else if (dy === -1) {
-                        ctx.fillRect(segment.x * gridSize + offset, segment.y * gridSize + offset, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * gridSize + gridSize - offset - eyeSize, segment.y * gridSize + offset, eyeSize, eyeSize);
-                    } else if (dy === 1) {
-                        ctx.fillRect(segment.x * gridSize + offset, segment.y * gridSize + gridSize - offset - eyeSize, eyeSize, eyeSize);
-                        ctx.fillRect(segment.x * gridSize + gridSize - offset - eyeSize, segment.y * gridSize + gridSize - offset - eyeSize, eyeSize, eyeSize);
+                    // Rotation selon la direction
+                    ctx.translate(x + gridSize / 2, y + gridSize / 2);
+                    if (dx === 1) ctx.rotate(0);
+                    else if (dx === -1) ctx.rotate(Math.PI);
+                    else if (dy === 1) ctx.rotate(Math.PI / 2);
+                    else if (dy === -1) ctx.rotate(-Math.PI / 2);
+                    
+                    // Corps de la tête (forme ovale)
+                    ctx.fillStyle = snakeColor;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, gridSize / 2 - 1, gridSize / 2.5 - 1, 0, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Contour de la tête
+                    ctx.strokeStyle = adjustBrightness(snakeColor, -40);
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Yeux (plus réalistes)
+                    const eyeOffset = gridSize / 6;
+                    const eyeSize = gridSize / 5;
+                    
+                    // Oeil gauche
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset, -eyeOffset, eyeSize, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = adjustBrightness(snakeColor, -60);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Pupille gauche
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset + 1, -eyeOffset, eyeSize / 2.5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Oeil droit
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset, eyeOffset, eyeSize, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = adjustBrightness(snakeColor, -60);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Pupille droite
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset + 1, eyeOffset, eyeSize / 2.5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Reflets dans les yeux
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset - 1, -eyeOffset - 1, eyeSize / 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(eyeOffset - 1, eyeOffset - 1, eyeSize / 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Langue (si le serpent bouge)
+                    if (dx !== 0 || dy !== 0) {
+                        ctx.strokeStyle = '#ff1744';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(gridSize / 3, 0);
+                        ctx.lineTo(gridSize / 2.2 + Math.sin(Date.now() / 100) * 2, -2);
+                        ctx.moveTo(gridSize / 3, 0);
+                        ctx.lineTo(gridSize / 2.2 + Math.sin(Date.now() / 100) * 2, 2);
+                        ctx.stroke();
                     }
+                    
+                    ctx.restore();
+                    
+                } else {
+                    // CORPS DU SERPENT - Style écailles
+                    const prevSegment = snake[index - 1];
+                    const nextSegment = snake[index + 1];
+                    
+                    // Couleur dégradée selon la position
+                    const brightness = -5 - (index * 2);
+                    ctx.fillStyle = adjustBrightness(snakeColor, brightness);
+                    
+                    // Corps avec coins arrondis selon la direction
+                    const radius = gridSize / 4;
+                    ctx.beginPath();
+                    ctx.roundRect(x + 1, y + 1, gridSize - 2, gridSize - 2, radius);
+                    ctx.fill();
+                    
+                    // Contour
+                    ctx.strokeStyle = adjustBrightness(snakeColor, brightness - 30);
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    
+                    // Motif d'écailles
+                    ctx.fillStyle = adjustBrightness(snakeColor, brightness + 10);
+                    ctx.globalAlpha = 0.5;
+                    
+                    // Petites écailles
+                    const scaleSize = gridSize / 6;
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            ctx.beginPath();
+                            ctx.arc(
+                                x + (gridSize / 4) + i * (gridSize / 4),
+                                y + (gridSize / 4) + j * (gridSize / 4),
+                                scaleSize / 2,
+                                0,
+                                Math.PI,
+                                false
+                            );
+                            ctx.fill();
+                        }
+                    }
+                    ctx.globalAlpha = 1.0;
+                    
+                    // Effet de brillance sur le dessus
+                    const gradient = ctx.createLinearGradient(x, y, x, y + gridSize);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+                    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize / 2);
                 }
             });
             
-            // Dessiner la nourriture avec animation
-            ctx.fillStyle = foodColor;
-            ctx.beginPath();
-            const foodRadius = (gridSize / 2 - 2);
-            ctx.arc(
-                foodX * gridSize + gridSize / 2,
-                foodY * gridSize + gridSize / 2,
-                foodRadius,
-                0,
-                2 * Math.PI
-            );
-            ctx.fill();
+            // Dessiner la nourriture avec emoji
+            if (currentFood) {
+                const foodCenterX = foodX * gridSize + gridSize / 2;
+                const foodCenterY = foodY * gridSize + gridSize / 2;
+                
+                // Ombre sous la nourriture
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(foodCenterX, foodCenterY + gridSize / 3, gridSize / 3, gridSize / 6, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Animation de rebond
+                const bounce = Math.sin(Date.now() / 200) * 2;
+                
+                // Dessiner l'emoji
+                ctx.font = `${gridSize * 0.8}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(currentFood.emoji, foodCenterX, foodCenterY + bounce);
+                
+                // Effet de brillance/étoile autour de la nourriture
+                const sparkle = Math.sin(Date.now() / 150) * 0.5 + 0.5;
+                ctx.strokeStyle = `rgba(255, 255, 100, ${sparkle})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const starPoints = 8;
+                for (let i = 0; i < starPoints * 2; i++) {
+                    const radius = i % 2 === 0 ? gridSize / 2 + 5 : gridSize / 3;
+                    const angle = (Math.PI * i) / starPoints;
+                    const px = foodCenterX + Math.cos(angle) * radius;
+                    const py = foodCenterY + Math.sin(angle) * radius + bounce;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+        
+        // Fonction helper pour roundRect (compatibilité)
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+        
+        // Animation de points flottants
+        function showPointsAnimation(x, y, points) {
+            const pointsDiv = document.createElement('div');
+            pointsDiv.textContent = `+${points}`;
+            pointsDiv.style.position = 'fixed';
+            pointsDiv.style.color = '#FFD700';
+            pointsDiv.style.fontWeight = 'bold';
+            pointsDiv.style.fontSize = '24px';
+            pointsDiv.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+            pointsDiv.style.pointerEvents = 'none';
+            pointsDiv.style.zIndex = '1000';
             
-            // Effet brillant sur la nourriture
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.beginPath();
-            ctx.arc(
-                foodX * gridSize + gridSize / 2 - foodRadius / 3,
-                foodY * gridSize + gridSize / 2 - foodRadius / 3,
-                foodRadius / 3,
-                0,
-                2 * Math.PI
-            );
-            ctx.fill();
+            const canvasRect = canvas.getBoundingClientRect();
+            const left = canvasRect.left + x * gridSize + gridSize / 2;
+            const top = canvasRect.top + y * gridSize;
+            
+            pointsDiv.style.left = left + 'px';
+            pointsDiv.style.top = top + 'px';
+            pointsDiv.style.transform = 'translate(-50%, -50%)';
+            
+            document.body.appendChild(pointsDiv);
+            
+            // Animation
+            let opacity = 1;
+            let posY = 0;
+            const animatePoints = setInterval(() => {
+                opacity -= 0.05;
+                posY -= 2;
+                pointsDiv.style.opacity = opacity;
+                pointsDiv.style.transform = `translate(-50%, calc(-50% + ${posY}px))`;
+                
+                if (opacity <= 0) {
+                    clearInterval(animatePoints);
+                    document.body.removeChild(pointsDiv);
+                }
+            }, 50);
         }
         
         function placeFood() {
@@ -891,6 +1093,9 @@
                     }
                 }
             }
+            
+            // Choisir un type de nourriture aléatoire
+            currentFood = foodTypes[Math.floor(Math.random() * foodTypes.length)];
         }
         
         function updateScore() {
