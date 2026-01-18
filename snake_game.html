@@ -627,80 +627,48 @@
         // High scores
         let highScores = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
         
-        // Audio context pour les sons
-        let audioCtx = null;
-        let activeOscillators = [];
-        
-        // Initialiser l'audio context au premier clic
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-        
-        // Arrêter tous les sons en cours
-        function stopAllSounds() {
-            activeOscillators.forEach(osc => {
-                try {
-                    osc.stop();
-                    osc.disconnect();
-                } catch(e) {
-                    // Ignore les erreurs si déjà arrêté
-                }
-            });
-            activeOscillators = [];
-        }
-        
-        // Sons
+        // Sons - Système simplifié
         function playSound(type) {
             if (!soundEnabled) return;
             
-            initAudio();
-            
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            let duration = 0.1;
-            
-            switch(type) {
-                case 'eat':
-                    oscillator.frequency.value = 400;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                    duration = 0.1;
-                    break;
-                case 'gameOver':
-                    oscillator.frequency.value = 200;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                    duration = 0.3;
-                    break;
-                case 'levelUp':
-                    oscillator.frequency.value = 600;
-                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                    duration = 0.2;
-                    break;
-            }
-            
-            oscillator.start(audioCtx.currentTime);
-            oscillator.stop(audioCtx.currentTime + duration);
-            
-            activeOscillators.push(oscillator);
-            
-            // Nettoyer après la durée
-            setTimeout(() => {
-                const index = activeOscillators.indexOf(oscillator);
-                if (index > -1) {
-                    try {
-                        oscillator.disconnect();
-                    } catch(e) {}
-                    activeOscillators.splice(index, 1);
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                let duration = 0.1;
+                
+                switch(type) {
+                    case 'eat':
+                        oscillator.frequency.value = 400;
+                        duration = 0.1;
+                        break;
+                    case 'gameOver':
+                        oscillator.frequency.value = 200;
+                        duration = 0.3;
+                        break;
+                    case 'levelUp':
+                        oscillator.frequency.value = 600;
+                        duration = 0.2;
+                        break;
                 }
-            }, duration * 1000 + 100);
+                
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + duration);
+                
+                // Fermer le contexte après le son
+                setTimeout(() => {
+                    audioCtx.close();
+                }, duration * 1000 + 100);
+            } catch(e) {
+                console.log('Erreur audio:', e);
+            }
         }
         
         // Initialisation
@@ -767,9 +735,6 @@
         
         function startGame() {
             if (gameRunning) return;
-            
-            // Arrêter tout son en cours
-            stopAllSounds();
             
             // S'assurer que l'ancien gameLoop est bien arrêté
             if (gameLoop) {
@@ -874,9 +839,11 @@
                         document.getElementById('levelDisplay').classList.remove('pulse');
                     }, 500);
                     
-                    // Accélérer le jeu
-                    if (level > 1) {
-                        clearInterval(gameLoop);
+                    // Accélérer le jeu - BIEN arrêter l'ancien interval avant d'en créer un nouveau
+                    if (level > 1 && gameRunning && !gamePaused) {
+                        if (gameLoop) {
+                            clearInterval(gameLoop);
+                        }
                         currentSpeed = Math.max(50, baseSpeed - (level - 1) * 10);
                         gameLoop = setInterval(update, currentSpeed);
                     }
@@ -1177,17 +1144,15 @@
         }
         
         function gameOver() {
-            // Arrêter la boucle de jeu
+            // Arrêter la boucle de jeu IMMÉDIATEMENT
             if (gameLoop) {
                 clearInterval(gameLoop);
                 gameLoop = null;
             }
             
+            // Marquer le jeu comme arrêté AVANT tout le reste
             gameRunning = false;
             gamePaused = false;
-            
-            // Arrêter tous les sons en cours
-            stopAllSounds();
             
             // Jouer le son de game over
             playSound('gameOver');
