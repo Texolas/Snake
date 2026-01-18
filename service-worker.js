@@ -1,7 +1,7 @@
 const CACHE_NAME = 'snake-game-v1';
 const urlsToCache = [
-  '/snake_game.html',
-  '/manifest.json'
+  './snake_game.html',
+  './manifest.json'
 ];
 
 // Installation du service worker
